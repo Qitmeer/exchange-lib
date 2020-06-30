@@ -1,2 +1,2 @@
 # exchange-lib
-The Qitmeer API/SDK for exchange 
+The Qitmeer API/SDK for PMEER exchanges 
