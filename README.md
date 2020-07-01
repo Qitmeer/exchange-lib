@@ -51,8 +51,8 @@ The Qitmeer API/SDK for PMEER exchanges
    ```
 ####2. Sign transaction
 
-   ```
-   inputs := make(map[string]uint32, 0)
+```
+        inputs := make(map[string]uint32, 0)
 	outputs := make(map[string]uint64, 0)
 	inputs["fa069bd82eda6b98e9ea40a575de1dc4c053d94a9901a956e13d30f6ab81413e"] = 0
 	outputs["TmUQjNKPA3dLBB6ZfcKd4YSDThQ9Cqzmk5S"] = 100000000
@@ -71,10 +71,11 @@ The Qitmeer API/SDK for PMEER exchanges
 			client.SendTransaction(rawTx)
 		}
 	}
-	```
+```
+
 ####3. Address generation
 
-	##### One address per account
+##### One address per account
 
 		ecPrivate, err := address.NewEcPrivateKey()
 		if err != nil {
@@ -91,15 +92,15 @@ The Qitmeer API/SDK for PMEER exchanges
 			fmt.Println(err)
 			return
 		}
-	##### Manage multiple addresses on one account
+##### Manage multiple addresses on one account
 
-	###### Generate HD private key
+###### Generate HD private key
 		priv, err := address.NewHdPrivate("testnet")
 		if err != nil {
 			fmt.Println(err)
 			return
 		}
-	###### Generate child private key
+###### Generate child private key
 		priv0, err := address.NewHdDerive(priv, 0, "testnet")
 		if err != nil {
 			fmt.Println(err)
@@ -110,7 +111,7 @@ The Qitmeer API/SDK for PMEER exchanges
 			fmt.Println(err)
 			return
 		}
-	######  Child private key to secp256k1 private key
+######  Child private key to secp256k1 private key
 		ecPriv0, err := address.HdToEc(priv0, "testnet")
 		if err != nil {
 			fmt.Println(err)
@@ -121,7 +122,7 @@ The Qitmeer API/SDK for PMEER exchanges
 			fmt.Println(err)
 			return
 		}
-	######  secp256k1 sub-private key to public key
+######  secp256k1 sub-private key to public key
 		ecPublic0, err := address.EcPrivateToPublic(ecPriv0)
 		if err != nil {
 			fmt.Println(err)
@@ -132,7 +133,7 @@ The Qitmeer API/SDK for PMEER exchanges
 			fmt.Println(err)
 			return
 		}
-	###### secp256k1 public key to address
+###### secp256k1 public key to address
 		address0, err := address.EcPublicToAddress(ecPublic0, "testnet")
 		if err != nil {
 			fmt.Println(err)
@@ -143,4 +144,4 @@ The Qitmeer API/SDK for PMEER exchanges
 			fmt.Println(err)
 			return
 		}
-	In addition to generating multiple addresses through the HD private key, multiple addresses can also be generated through the HD public key.
+In addition to generating multiple addresses through the HD private key, multiple addresses can also be generated through the HD public key.
