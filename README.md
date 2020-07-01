@@ -6,7 +6,9 @@ The Qitmeer API/SDK for PMEER exchanges
 
 #### 1. How to synchronize utxo
 
-- Get the latest blockorder through synchronizer.GetHistoryOrder- Create sync.Options to set rpc information
+- Get the latest blockorder through synchronizer.GetHistoryOrder
+
+- Create sync.Options to set rpc information
 
 - Use sync.NewSynchronizer to create a synchronizer
 
