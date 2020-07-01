@@ -59,7 +59,7 @@ The Qitmeer API/SDK for PMEER exchanges
 	inputs["fa069bd82eda6b98e9ea40a575de1dc4c053d94a9901a956e13d30f6ab81413e"] = 0
 	outputs["TmUQjNKPA3dLBB6ZfcKd4YSDThQ9Cqzmk5S"] = 100000000
 	outputs["TmWRM7fk8SzBWvuUQv2cJ4T7nWPnNmzrbxi"] = 200000000
-	txCode, err := sign.TxEncode(1, 0, inputs, outputs)
+	txCode, err := sign.TxEncode(1, 0, nil, inputs, outputs)
 	if err != nil {
 		fmt.Println(err)
 	} else {
@@ -69,6 +69,7 @@ The Qitmeer API/SDK for PMEER exchanges
 				User:    "admin",
 				Pwd:     "123",
 				Address: "127.0.0.1:1234",
+                Https:   false,
 			})
 			client.SendTransaction(rawTx)
 		}
