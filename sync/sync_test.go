@@ -11,7 +11,7 @@ func TestSynchronizer_Start(t *testing.T) {
 	opt := &Options{
 		RpcAddr: "127.0.0.1:1234",
 		RpcUser: "admin",
-		RpcPwd:  "Wsk%Tq=?]p5d+Na]R*#ad",
+		RpcPwd:  "123",
 		Https:   true,
 		TxChLen: 100,
 	}
