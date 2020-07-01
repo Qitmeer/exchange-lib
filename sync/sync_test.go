@@ -2,22 +2,21 @@ package sync
 
 import (
 	"fmt"
-	"github.com/Qitmeer/exchange-lib/sync"
-	"os"
+	"github.com/Qitmeer/exchange-lib/uxto"
 	"testing"
 	"time"
 )
 
 func TestSynchronizer_Start(t *testing.T) {
-	opt := &sync.Options{
+	opt := &Options{
 		RpcAddr: "127.0.0.1:1234",
 		RpcUser: "admin",
-		RpcPwd:  "123",
-		Https:   false,
+		RpcPwd:  "Wsk%Tq=?]p5d+Na]R*#ad",
+		Https:   true,
 		TxChLen: 100,
 	}
-	synchronizer := sync.NewSynchronizer(opt)
-	txChan, err := synchronizer.Start(&sync.HistoryOrder{0, 0})
+	synchronizer := NewSynchronizer(opt)
+	txChan, err := synchronizer.Start(&HistoryOrder{0, 0})
 	if err != nil {
 		fmt.Printf(err.Error())
 		return
@@ -27,6 +26,8 @@ func TestSynchronizer_Start(t *testing.T) {
 			txs := <-txChan
 			for _, tx := range txs {
 				// save tx or uxto
+				utxos := uxto.GetUxtos(&tx)
+				fmt.Printf("%v\n", utxos)
 			}
 		}
 	}()
@@ -40,4 +41,5 @@ func TestSynchronizer_Start(t *testing.T) {
 			time.Sleep(time.Second * 10)
 		}
 	}()
+	time.Sleep(1000 * time.Second)
 }

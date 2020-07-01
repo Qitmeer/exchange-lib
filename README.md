@@ -37,6 +37,7 @@ The Qitmeer API/SDK for PMEER exchanges
 			txs := <-txChan
 			for _, tx := range txs {
 				// save tx or uxto
+                utxos := uxto.GetUxtos(&tx)
 			}
 		}
 	}()
