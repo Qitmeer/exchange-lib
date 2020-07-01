@@ -4,7 +4,7 @@ The Qitmeer API/SDK for PMEER exchanges
 #### How to use
 
 
-####1. How to synchronize utxo
+#### 1. How to synchronize utxo
 
 - Get the latest blockorder through synchronizer.GetHistoryOrder- Create sync.Options to set rpc information
 
@@ -49,7 +49,7 @@ The Qitmeer API/SDK for PMEER exchanges
 		}
 	}()
    ```
-####2. Sign transaction
+#### 2. Sign transaction
 
 ```
         inputs := make(map[string]uint32, 0)
@@ -73,7 +73,7 @@ The Qitmeer API/SDK for PMEER exchanges
 	}
 ```
 
-####3. Address generation
+#### 3. Address generation
 
 ##### One address per account
 
