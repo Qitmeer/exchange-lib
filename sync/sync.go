@@ -224,7 +224,7 @@ func getConfirmedTx(block *rpc.Block) []rpc.Transaction {
 			txs = append(txs, tx)
 		}
 	}
-	return []rpc.Transaction{}
+	return txs
 }
 
 func getConfirmedCoinBase(block *rpc.Block) []rpc.Transaction {
