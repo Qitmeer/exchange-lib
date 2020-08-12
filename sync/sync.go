@@ -216,9 +216,12 @@ func (s *Synchronizer) setThreshold() error {
 }
 
 func getConfirmedTx(block *rpc.Block) []rpc.Transaction {
-	for i, tx := range block.Transactions {
-		if isCoinBase(&tx) {
-			return append(block.Transactions[0:i], block.Transactions[i+1:]...)
+	txs := []rpc.Transaction{}
+	for _, tx := range block.Transactions {
+		if isCoinBase(&tx) || tx.Duplicate {
+			continue
+		} else {
+			txs = append(txs, tx)
 		}
 	}
 	return []rpc.Transaction{}
@@ -227,7 +230,11 @@ func getConfirmedTx(block *rpc.Block) []rpc.Transaction {
 func getConfirmedCoinBase(block *rpc.Block) []rpc.Transaction {
 	for _, tx := range block.Transactions {
 		if isCoinBase(&tx) {
-			return []rpc.Transaction{tx}
+			if tx.Duplicate {
+				return []rpc.Transaction{}
+			} else {
+				return []rpc.Transaction{tx}
+			}
 		}
 	}
 	return []rpc.Transaction{}
