@@ -155,6 +155,7 @@ func (req *ClientRequest) call(rpcCfg *RpcConfig) (*ClientResponse, error) {
 	}
 
 	client := &http.Client{Transport: tr}
+	defer client.CloseIdleConnections()
 
 	//convert struct to []byte
 	marshaledData, err := json.Marshal(req)
@@ -171,7 +172,6 @@ func (req *ClientRequest) call(rpcCfg *RpcConfig) (*ClientResponse, error) {
 	if err != nil {
 		return nil, fmt.Errorf("rpc client create request failed; error:%s ", err.Error())
 	}
-
 	if httpRequest == nil {
 		return nil, fmt.Errorf("rpc client create request failed")
 	}

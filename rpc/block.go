@@ -35,6 +35,7 @@ type Transaction struct {
 	Vin           []Vin     `json:"vin"`
 	Vout          []Vout    `json:"vout"`
 	Blockhash     string    `json:"blockhash"`
+	Duplicate     bool      `json:"duplicate"`
 	Confirmations uint32    `json:"confirmations"`
 }
 
