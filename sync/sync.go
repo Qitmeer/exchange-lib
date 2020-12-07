@@ -3,6 +3,7 @@ package sync
 import (
 	"fmt"
 	"github.com/Qitmeer/exchange-lib/rpc"
+	"github.com/bCoder778/log"
 	"time"
 )
 
@@ -82,7 +83,7 @@ func (s *Synchronizer) Start(order *HistoryOrder) (<-chan []rpc.Transaction, err
 // use the return value as the parameter for the next startup
 func (s *Synchronizer) Stop() {
 	s.stopSyncTxCh <- true
-	s.stopSyncCoinBaseCh <- true
+	//s.stopSyncCoinBaseCh <- true
 }
 
 func (s *Synchronizer) GetHistoryOrder() *HistoryOrder {
@@ -108,7 +109,7 @@ func (s *Synchronizer) startSync(hisOrder *HistoryOrder) {
 	}
 
 	go s.SyncTxs()
-	go s.SyncCoinBaseTx()
+	//go s.SyncCoinBaseTx()
 }
 
 func (s *Synchronizer) SyncTxs() {
@@ -119,11 +120,12 @@ func (s *Synchronizer) SyncCoinBaseTx() {
 	for {
 		select {
 		case _ = <-s.stopSyncCoinBaseCh:
+			log.Infof("stop sync coinbase tx")
 			return
 		default:
 			block, err := s.rpcClient.GetBlockByOrder(s.curCoinBaseBlockOrder)
 			if err != nil {
-				time.Sleep(time.Second * 5)
+				time.Sleep(time.Second * 30)
 				break
 			}
 			if !s.isBlockConfirmed(block) {
@@ -150,29 +152,24 @@ func (s *Synchronizer) requestTxs() {
 	for {
 		select {
 		case _ = <-s.stopSyncTxCh:
+			log.Infof("stop sync tx")
 			return
 		default:
 			block, err := s.rpcClient.GetBlockByOrder(s.curTxBlockOrder)
 			if err != nil {
-				time.Sleep(time.Second * 5)
+				time.Sleep(time.Second * 30)
 				break
 			}
-			if block.Txsvalid {
-				if s.isTxConfirmed(block) {
-					txs := getConfirmedTx(block)
+			if s.isTxConfirmed(block) {
+				if block.Txsvalid {
+					txs := s.getConfirmedTx(block)
 					if len(txs) != 0 {
 						s.txChannel <- txs
 					}
-					s.curTxBlockOrder++
-				} else {
-					time.Sleep(time.Second * 1)
 				}
+				s.curTxBlockOrder++
 			} else {
-				if s.isTxConfirmed(block) {
-					s.curTxBlockOrder++
-				} else {
-					time.Sleep(time.Second * 1)
-				}
+				time.Sleep(time.Second * 30)
 			}
 		}
 	}
@@ -200,6 +197,10 @@ func (s *Synchronizer) IsCoinBaseUsable(block *rpc.Block) (bool, error) {
 	return false, nil
 }
 
+func (s *Synchronizer) SendTx(raw string) (string, error) {
+	return s.rpcClient.SendTransaction(raw)
+}
+
 type threshold struct {
 	coinBaseThreshold    uint32
 	transactionThreshold uint32
@@ -215,14 +216,20 @@ func (s *Synchronizer) setThreshold() error {
 	return nil
 }
 
-func getConfirmedTx(block *rpc.Block) []rpc.Transaction {
+func (s *Synchronizer) getConfirmedTx(block *rpc.Block) []rpc.Transaction {
 	txs := []rpc.Transaction{}
 	for _, tx := range block.Transactions {
-		if isCoinBase(&tx) || tx.Duplicate {
+		if tx.Duplicate {
 			continue
-		} else {
-			txs = append(txs, tx)
 		}
+		if isCoinBase(&tx) {
+			ok, _ := s.IsCoinBaseUsable(block)
+			if !ok {
+				continue
+			}
+		}
+		tx.BlockOrder = block.Order
+		txs = append(txs, tx)
 	}
 	return txs
 }
@@ -230,9 +237,11 @@ func getConfirmedTx(block *rpc.Block) []rpc.Transaction {
 func getConfirmedCoinBase(block *rpc.Block) []rpc.Transaction {
 	for _, tx := range block.Transactions {
 		if isCoinBase(&tx) {
+			tx.IsCoinBase = true
 			if tx.Duplicate {
 				return []rpc.Transaction{}
 			} else {
+				tx.BlockOrder = block.Order
 				return []rpc.Transaction{tx}
 			}
 		}
