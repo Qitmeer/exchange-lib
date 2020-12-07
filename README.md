@@ -103,7 +103,7 @@ The Qitmeer API/SDK for PMEER exchanges
 
 - >Example 
 
-  ##### api/v1/utxo|GET
+  ##### api/v1/utxo
   ```json
     {
     "code": 0,
