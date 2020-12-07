@@ -9,3 +9,6 @@ exchange/data/CURRENT.bak
 exchange/data/CURRENT
 exchange/data/000003.log
 exchange/data/000002.ldb
+.idea
+exchange/exchange
+exchange/cmd/main.go
