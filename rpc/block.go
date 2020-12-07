@@ -35,8 +35,10 @@ type Transaction struct {
 	Vin           []Vin     `json:"vin"`
 	Vout          []Vout    `json:"vout"`
 	Blockhash     string    `json:"blockhash"`
+	BlockOrder    uint64    `json:"-"`
 	Duplicate     bool      `json:"duplicate"`
 	Confirmations uint32    `json:"confirmations"`
+	IsCoinBase    bool      `json:"-"`
 }
 
 type Vin struct {

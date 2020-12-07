@@ -4,7 +4,9 @@ The Qitmeer API/SDK for PMEER exchanges
 #### How to use
 
 
-#### 1. How to synchronize utxo
+#### 1. How to use
+
+##### Method 1:Get available uxto and manage utxo by yourself
 
 - Get the latest blockorder through synchronizer.GetHistoryOrder
 
@@ -38,6 +40,8 @@ The Qitmeer API/SDK for PMEER exchanges
 			for _, tx := range txs {
 				// save tx or uxto
                 utxos := uxto.GetUxtos(&tx)
+                // update utxo  has been spent
+                spentTxs := utxo.GetSpentTxs(&tx) 
 			}
 		}
 	}()
@@ -52,6 +56,100 @@ The Qitmeer API/SDK for PMEER exchanges
 		}
 	}()
    ```
+##### Method 2:Start the service and get the available utxo through api
+
+```bash
+    cd exchange
+    ./build.sh
+    cd bin
+    cd linux
+    ./exchange
+```
+- Configuration
+
+```
+    [api]
+    listen="0.0.0.0:11360"
+    
+    [rpc]
+    host="127.0.0.1:1234"
+    tls=false
+    admin="admin"
+    password="123"
+    
+    [sync]
+    # start sync from block order 
+    start=0
+    # synchronized address list
+    address=[
+        "TmiguDxFD7JvDRUvbcY7SK85NT7eVK4m9wL",
+        "Tmax8njWbgrz4oagPBtQTzRMmDkUUPcVV3e",
+        "TmhAddRJNQ4uAarPaxEmurdkxHqtFEsrSPh"
+    ]
+```
+- Command
+
+    |command|description|
+    |:---|:----------------------|
+    |  -c |  show version|
+    |  -v |  clear all data records|
+
+- Api
+
+    |description|url|method|params|
+    |:--------------- |:------------------------ |:----- |:-------|
+    |get utxo |api/v1/utxo|GET|address|
+    |send transaction  |api/v1/transaction |POST |raw;spent|
+
+- >Example 
+
+  ##### api/v1/utxo|GET
+  ```json
+    {
+    "code": 0,
+    "msg": "ok",
+    "rs": {
+        "balance": 899985000000000,
+        "utxo": [
+            {
+                "txid": "759c0e3b69989736f39a5cf5ea057145e373af2f2117cc8cb06a7de0f6df0bcc",
+                "vout": 1,
+                "address": "Tmax8njWbgrz4oagPBtQTzRMmDkUUPcVV3e",
+                "amount": 299995000000000,
+                "spent": ""
+            },
+            {
+                "txid": "93517537cfcb9b53b56ddefae24f109f49943cc85e38d9b9bc196aad94013baf",
+                "vout": 1,
+                "address": "Tmax8njWbgrz4oagPBtQTzRMmDkUUPcVV3e",
+                "amount": 299995000000000,
+                "spent": ""
+            },
+            {
+                "txid": "9c89feabd1a85b497681cd4e6cea83abd758ff28427c5ec853a5a97e96c5f236",
+                "vout": 0,
+                "address": "Tmax8njWbgrz4oagPBtQTzRMmDkUUPcVV3e",
+                "amount": 299995000000000,
+                "spent": ""
+            }
+        ]
+      }
+   }
+  ```
+
+##### api/v1/transaction
+
+- form
+```json
+{
+    "raw":"01000000018cfef93a1e2564f2d970f562bbd7fbecbd393fa34495d95d435a08482d288ed500000000ffffffff0264737199800600001976a9146e88dc51b45362c2138de38a0ea506daf7e5ac7988ac00c817a8040000001976a914a3aa57548c99b54473126f2d2ef526f7031f7ec888ac00000000000000005a8acd5f016b483045022100fdbce12c4ee4f4214525d3f7e3380a6b5f1c2eb663d3273454d303316889185902205ff4817b107579c847787c8ce46164e1b5572fdef2937bec7270f2ed6afc980f012102786d472b1cb150134900be47c98a6ef9f666bc33dbfcf2619ee299b163670cb7",
+    "spent":"[{\"txid\": \"759c0e3b69989736f39a5cf5ea057145e373af2f2117cc8cb06a7de0f6df0bcc\",\"vout\": 1,\"address\": \"Tmax8njWbgrz4oagPBtQTzRMmDkUUPcVV3e\",\"amount\": 299995000000000,\"spent\": \"\"},{\"txid\": \"93517537cfcb9b53b56ddefae24f109f49943cc85e38d9b9bc196aad94013baf\",\"vout\": 1,\"address\":\"Tmax8njWbgrz4oagPBtQTzRMmDkUUPcVV3e\",\"amount\": 299995000000000,\"spent\": \"\"}]"
+}
+```
+
+
+
+
 #### 2. Sign transaction
 
 ```

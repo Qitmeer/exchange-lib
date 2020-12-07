@@ -1,0 +1,11 @@
+
+exchange/data/
+exchange/bin
+/data
+exchange/data/MANIFEST-000004
+exchange/data/LOG
+exchange/data/LOCK
+exchange/data/CURRENT.bak
+exchange/data/CURRENT
+exchange/data/000003.log
+exchange/data/000002.ldb

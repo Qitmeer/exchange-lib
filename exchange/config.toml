@@ -1,0 +1,19 @@
+[api]
+listen="0.0.0.0:11360"
+
+[rpc]
+host="127.0.0.1:1234"
+tls=false
+admin="admin"
+password="123"
+
+[sync]
+# start sync from block order
+start=503042
+# synchronized address list
+address=[
+    "TmRfnZPT3r93WG1LhHdEgeJi36gmPN4MytD",
+    "Tmax8njWbgrz4oagPBtQTzRMmDkUUPcVV3e",
+    "TmhAddRJNQ4uAarPaxEmurdkxHqtFEsrSPh",
+    "TmfTUZcZNrtvuyqfZym5LJ2sT2MN3p5WES8"
+]
