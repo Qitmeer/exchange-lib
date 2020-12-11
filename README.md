@@ -100,6 +100,7 @@ The Qitmeer API/SDK for PMEER exchanges
     |:--------------- |:------------------------ |:----- |:-------|
     |get utxo |api/v1/utxo|GET|address|
     |send transaction  |api/v1/transaction |POST |raw;spent|
+    |add address  |api/v1/address |POST |address|
 
 - >Example 
 
@@ -147,7 +148,14 @@ The Qitmeer API/SDK for PMEER exchanges
 }
 ```
 
+##### api/v1/address
 
+- form
+```json
+{
+   "address": "TmUHh6bAdLbto9AYhodEwGZi9WY77CoBFXr"
+}
+```
 
 
 #### 2. Sign transaction
