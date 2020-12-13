@@ -32,6 +32,7 @@ func (a *Api) Stop() {
 func (a *Api) addApi() {
 	a.rest.AuthRouteSet("api/v1/utxo").Get(a.getUTXO)
 	a.rest.AuthRouteSet("api/v1/transaction").Post(a.sendTransaction)
+	a.rest.AuthRouteSet("api/v1/address").Post(a.addAddress)
 }
 
 func (a *Api) getUTXO(ct *Context) (interface{}, *Error) {
@@ -74,4 +75,16 @@ func (a *Api) sendTransaction(ct *Context) (interface{}, *Error) {
 		return nil, &Error{ERROR_UNKNOWN, err.Error()}
 	}
 	return txId, nil
+}
+
+func (a *Api) addAddress(ct *Context) (interface{}, *Error) {
+	addr, ok := ct.Form["address"]
+	if !ok {
+		return nil, &Error{ERROR_UNKNOWN, "address is required"}
+	}
+	err := a.storage.InsertAddress(addr)
+	if err != nil {
+		return nil, &Error{ERROR_UNKNOWN, err.Error()}
+	}
+	return addr, nil
 }

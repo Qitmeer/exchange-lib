@@ -65,7 +65,9 @@ func dealCommand() {
 func startSync(storage *db.UTXODB, synchronizer *sync.Synchronizer, wg *sync2.WaitGroup) {
 	defer wg.Done()
 
-	addrs := addressMap()
+	for _, addr := range conf.Setting.Sync.Address {
+		storage.InsertAddress(addr)
+	}
 
 	start := conf.Setting.Sync.Start
 	coinBaseStart := conf.Setting.Sync.Start
@@ -101,16 +103,18 @@ func startSync(storage *db.UTXODB, synchronizer *sync.Synchronizer, wg *sync2.Wa
 				txs := <-txChan
 				for _, tx := range txs {
 					// save tx or uxto
-					utxos := uxto.GetAddressUxtos(&tx, addrs)
+					utxos := uxto.GetUxtos(&tx)
 					for _, u := range utxos {
-						dbUtxo := &db.UTXO{
-							TxId:    u.TxId,
-							Vout:    uint64(u.TxIndex),
-							Address: u.Address,
-							Amount:  u.Amount,
+						if storage.AddressIsExist(u.Address) {
+							dbUtxo := &db.UTXO{
+								TxId:    u.TxId,
+								Vout:    uint64(u.TxIndex),
+								Address: u.Address,
+								Amount:  u.Amount,
+							}
+							storage.UpdateAddressUTXO(u.Address, dbUtxo)
+							storage.SaveUTXO(dbUtxo)
 						}
-						storage.UpdateAddressUTXO(u.Address, dbUtxo)
-						storage.SaveUTXO(dbUtxo)
 					}
 					spentTxs := uxto.GetSpentTxs(&tx)
 					for _, spentTx := range spentTxs {
@@ -201,12 +205,4 @@ func clearDB() {
 			fmt.Println("Clear db success!")
 		}
 	}
-}
-
-func addressMap() map[string]bool {
-	addrs := map[string]bool{}
-	for _, addr := range conf.Setting.Sync.Address {
-		addrs[addr] = true
-	}
-	return addrs
 }

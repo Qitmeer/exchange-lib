@@ -15,11 +15,13 @@ const (
 	tx_bucket             = "tx_bucket"
 	utxo_bucket           = "utxo_bucket"
 	result_bucket         = "result_bucket"
+	address_bucket        = "address_bucket"
 )
 
 type UTXODB struct {
-	base  *base.Base
-	mutex sync.RWMutex
+	base         *base.Base
+	mutex        sync.RWMutex
+	addressCache map[string]bool
 }
 
 func NewUTXODB(path string) (*UTXODB, error) {
@@ -27,7 +29,9 @@ func NewUTXODB(path string) (*UTXODB, error) {
 	if err != nil {
 		return nil, err
 	}
-	return &UTXODB{base: base}, nil
+	db := &UTXODB{base: base, addressCache: make(map[string]bool)}
+	db.loadAddress()
+	return db, nil
 }
 
 func (c *UTXODB) Close() {
@@ -64,6 +68,48 @@ func (c *UTXODB) LastCoinBaseBlockOrder() uint64 {
 		return 0
 	}
 	return encode.BytesToUint64(bytes)
+}
+
+func (c *UTXODB) loadAddress() {
+	c.mutex.Lock()
+	defer c.mutex.Unlock()
+
+	addrs := c.getAllAddress()
+	for _, addr := range addrs {
+		c.addressCache[addr] = true
+	}
+}
+
+func (c *UTXODB) InsertAddress(address string) error {
+	c.mutex.Lock()
+	defer c.mutex.Unlock()
+
+	c.addressCache[address] = true
+
+	return c.base.PutInBucket(address_bucket, []byte(address), []byte{})
+}
+
+func (c *UTXODB) AddressIsExist(address string) bool {
+	c.mutex.RLock()
+	defer c.mutex.RUnlock()
+
+	_, ok := c.addressCache[address]
+
+	return ok
+}
+
+func (c *UTXODB) getAllAddress() []string {
+	addresses := []string{}
+	iter := c.base.Iter(address_bucket)
+	defer iter.Release()
+
+	// Iter will affect RLP decoding and reallocate memory to value
+	for iter.Next() {
+		key := make([]byte, len(iter.Key()))
+		copy(key, iter.Key())
+		addresses = append(addresses, string(base.LeafKeyToKey(address_bucket, key)))
+	}
+	return addresses
 }
 
 func (c *UTXODB) UpdateLastOrder(order uint64) {
