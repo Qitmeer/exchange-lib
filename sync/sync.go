@@ -201,6 +201,10 @@ func (s *Synchronizer) SendTx(raw string) (string, error) {
 	return s.rpcClient.SendTransaction(raw)
 }
 
+func (s *Synchronizer) GetTx(txId string) (*rpc.Transaction, error) {
+	return s.rpcClient.GetTransaction(txId)
+}
+
 type threshold struct {
 	coinBaseThreshold    uint32
 	transactionThreshold uint32
