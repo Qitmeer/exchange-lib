@@ -14,6 +14,7 @@ const (
 	coinbase_block_bucket = "coinbase_block_bucket"
 	tx_bucket             = "tx_bucket"
 	utxo_bucket           = "utxo_bucket"
+	spent_bucket          = "spent_bucket"
 	result_bucket         = "result_bucket"
 	address_bucket        = "address_bucket"
 )
@@ -78,6 +79,13 @@ func (c *UTXODB) loadAddress() {
 	for _, addr := range addrs {
 		c.addressCache[addr] = true
 	}
+}
+
+func (c *UTXODB) GetAddresses() []string {
+	c.mutex.Lock()
+	defer c.mutex.Unlock()
+
+	return c.getAllAddress()
 }
 
 func (c *UTXODB) InsertAddress(address string) error {
@@ -195,6 +203,17 @@ func (c *UTXODB) SaveUTXO(uxto *UTXO) error {
 	return c.base.PutInBucket(utxo_bucket, []byte(getOutKey(uxto.TxId, uxto.Vout)), bytes)
 }
 
+func (c *UTXODB) UpdateAddressUTXOMandatory(address string, u *UTXO) error {
+	c.mutex.Lock()
+	defer c.mutex.Unlock()
+
+	err := c.saveAddressUTXO(address, u)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
 func (c *UTXODB) UpdateAddressUTXO(address string, u *UTXO) error {
 	c.mutex.Lock()
 	defer c.mutex.Unlock()
@@ -210,6 +229,47 @@ func (c *UTXODB) UpdateAddressUTXO(address string, u *UTXO) error {
 		return err
 	}
 	return nil
+}
+
+func (c *UTXODB) InsertSpentUTXO(spent *SpentUTXO) error {
+	c.mutex.Lock()
+	defer c.mutex.Unlock()
+
+	bytes, err := json.Marshal(spent)
+	if err != nil {
+		return err
+	}
+	return c.base.PutInBucket(spent_bucket, []byte(spent.SpentTxId), bytes)
+}
+
+func (c *UTXODB) DeleteSpentUTXO(txId string) error {
+	c.mutex.Lock()
+	defer c.mutex.Unlock()
+
+	return c.base.DeleteFromBucket(spent_bucket, []byte(txId))
+}
+
+func (c *UTXODB) GetSpents() []*SpentUTXO {
+	c.mutex.RLock()
+	defer c.mutex.RUnlock()
+
+	rs := c.base.Foreach(spent_bucket)
+	spents := []*SpentUTXO{}
+	for _, value := range rs {
+		spent := &SpentUTXO{}
+		err := json.Unmarshal(value, spent)
+		if err == nil {
+			spents = append(spents, spent)
+		}
+	}
+	return spents
+}
+
+func (c *UTXODB) GetAddressUTXO(address string, txId string, vout uint64) (*UTXO, error) {
+	c.mutex.RLock()
+	defer c.mutex.RUnlock()
+
+	return c.getAddressUTXO(address, txId, vout)
 }
 
 func (c *UTXODB) GetAddressUTXOs(address string) ([]*UTXO, uint64, error) {
@@ -231,6 +291,32 @@ func (c *UTXODB) GetAddressUTXOs(address string) ([]*UTXO, uint64, error) {
 			return nil, 0, err
 		}
 		if utxo != nil && utxo.Spent == "" {
+			sum += utxo.Amount
+			uxtos = append(uxtos, utxo)
+		}
+	}
+	return uxtos, sum, nil
+}
+
+func (c *UTXODB) GetAddressSpentUTXOs(address string) ([]*UTXO, uint64, error) {
+	c.mutex.RLock()
+	defer c.mutex.RUnlock()
+
+	var sum uint64
+	uxtos := []*UTXO{}
+	iter := c.base.Iter(getUTXOBucket(address))
+	defer iter.Release()
+
+	// Iter will affect RLP decoding and reallocate memory to value
+	for iter.Next() {
+		value := make([]byte, len(iter.Value()))
+		copy(value, iter.Value())
+		var utxo *UTXO
+		err := json.Unmarshal(value, &utxo)
+		if err != nil {
+			return nil, 0, err
+		}
+		if utxo != nil && utxo.Spent != "" {
 			sum += utxo.Amount
 			uxtos = append(uxtos, utxo)
 		}
@@ -268,6 +354,11 @@ type UTXO struct {
 	Address string `json:"address"`
 	Amount  uint64 `json:"amount"`
 	Spent   string `json:"spent"`
+}
+
+type SpentUTXO struct {
+	SpentTxId string `json:"spenttxid"`
+	UTXOList  []*UTXO
 }
 
 type Wrong struct {

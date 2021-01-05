@@ -12,7 +12,9 @@ import (
 	"github.com/bCoder778/log"
 	"os"
 	"os/signal"
+	"strings"
 	sync2 "sync"
+	"time"
 )
 
 var interrupt chan struct{}
@@ -90,6 +92,8 @@ func startSync(storage *db.UTXODB, synchronizer *sync.Synchronizer, wg *sync2.Wa
 		return
 	}
 
+	go dealSpent(storage, synchronizer)
+
 	var preOrder, preCoinBaseOrder uint64
 	go func() {
 		for {
@@ -146,6 +150,40 @@ func startSync(storage *db.UTXODB, synchronizer *sync.Synchronizer, wg *sync2.Wa
 
 		}
 	}()
+}
+
+func dealSpent(storage *db.UTXODB, synchronizer *sync.Synchronizer) {
+	t := time.NewTicker(time.Second * 5 * 60)
+	defer t.Stop()
+
+	for {
+		select {
+		case <-interrupt:
+			log.Infof("Stop deal spent")
+			return
+		case <-t.C:
+			spents := storage.GetSpents()
+			for _, spent := range spents {
+				_, err := synchronizer.SendTx(spent.SpentTxId)
+				if err != nil && isNoTx(err) {
+					for _, utxo := range spent.UTXOList {
+						utxo.Spent = ""
+						err = storage.UpdateAddressUTXOMandatory(utxo.Address, utxo)
+						if err == nil {
+							storage.DeleteSpentUTXO(spent.SpentTxId)
+						}
+					}
+				}
+			}
+		}
+	}
+}
+
+func isNoTx(err error) bool {
+	if strings.Contains(err.Error(), "No information available about transaction") {
+		return true
+	}
+	return false
 }
 
 func startApi(db *db.UTXODB, synchronizer *sync.Synchronizer, wg *sync2.WaitGroup) {

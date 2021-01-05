@@ -12,8 +12,4 @@ password="123"
 start=503042
 # synchronized address list
 address=[
-    "TmRfnZPT3r93WG1LhHdEgeJi36gmPN4MytD",
-    "Tmax8njWbgrz4oagPBtQTzRMmDkUUPcVV3e",
-    "TmhAddRJNQ4uAarPaxEmurdkxHqtFEsrSPh",
-    "TmfTUZcZNrtvuyqfZym5LJ2sT2MN3p5WES8"
 ]

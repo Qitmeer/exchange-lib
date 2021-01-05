@@ -61,6 +61,10 @@ func (b *Base) PutInBucket(bucket string, key, value []byte) error {
 	return b.db.Put(Key(bucket, key), value, nil)
 }
 
+func (b *Base) DeleteFromBucket(bucket string, key []byte) error {
+	return b.db.Delete(Key(bucket, key), nil)
+}
+
 func (b *Base) GetFromBucket(bucket string, key []byte) ([]byte, error) {
 	return b.db.Get(Key(bucket, key), nil)
 }
