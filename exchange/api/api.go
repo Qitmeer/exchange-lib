@@ -45,7 +45,15 @@ func (a *Api) getUTXO(ct *Context) (interface{}, *Error) {
 	if !ok {
 		return nil, &Error{ERROR_UNKNOWN, "address is required"}
 	}
-	utxos, balance, _ := a.storage.GetAddressUTXOs(addr)
+	coin, ok := ct.Query["coin"]
+	if !ok {
+		return nil, &Error{ERROR_UNKNOWN, "coin is required"}
+	}
+	chainMainHeight, err := a.storage.GetHeight()
+	if err != nil {
+		return nil, &Error{ERROR_UNKNOWN, "no chain height"}
+	}
+	utxos, balance, _ := a.storage.GetAddressUTXOs(addr, coin, chainMainHeight)
 	rs := map[string]interface{}{
 		"utxo":    utxos,
 		"balance": balance,
@@ -58,7 +66,11 @@ func (a *Api) getSpentUTXO(ct *Context) (interface{}, *Error) {
 	if !ok {
 		return nil, &Error{ERROR_UNKNOWN, "address is required"}
 	}
-	spent, amount, _ := a.storage.GetAddressSpentUTXOs(addr)
+	coin, ok := ct.Query["coin"]
+	if !ok {
+		return nil, &Error{ERROR_UNKNOWN, "coin is required"}
+	}
+	spent, amount, _ := a.storage.GetAddressSpentUTXOs(addr, coin)
 	rs := map[string]interface{}{
 		"spent":  spent,
 		"amount": amount,

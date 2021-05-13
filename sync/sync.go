@@ -11,7 +11,7 @@ const (
 	defaultHost                 = "127.0.0.1:1234"
 	defaultTxChLen              = 100
 	defaultRepeatCount          = 5
-	defaultCoinBaseThreshold    = 720
+	DefaultCoinBaseThreshold    = 720
 	defaultTransactionThreshold = 10
 )
 
@@ -62,7 +62,7 @@ func NewSynchronizer(opt *Options) *Synchronizer {
 		stopSyncTxCh:       make(chan bool),
 		stopSyncCoinBaseCh: make(chan bool),
 		threshold: &threshold{
-			coinBaseThreshold:    defaultCoinBaseThreshold,
+			coinBaseThreshold:    DefaultCoinBaseThreshold,
 			transactionThreshold: defaultTransactionThreshold,
 		},
 	}
@@ -162,12 +162,16 @@ func (s *Synchronizer) requestTxs() {
 			}
 			if s.isTxConfirmed(block) {
 				if block.Txsvalid {
-					txs := s.getConfirmedTx(block)
-					if len(txs) != 0 {
-						s.txChannel <- txs
+					if ok, err := s.IsCoinBaseUsable(block); err == nil && ok {
+						txs := s.getConfirmedTx(block)
+						if len(txs) != 0 {
+							s.txChannel <- txs
+						}
+						s.curTxBlockOrder++
+					} else {
+						time.Sleep(time.Second * 30)
 					}
 				}
-				s.curTxBlockOrder++
 			} else {
 				time.Sleep(time.Second * 30)
 			}
@@ -226,13 +230,9 @@ func (s *Synchronizer) getConfirmedTx(block *rpc.Block) []rpc.Transaction {
 		if tx.Duplicate {
 			continue
 		}
-		if isCoinBase(&tx) {
-			ok, _ := s.IsCoinBaseUsable(block)
-			if !ok {
-				continue
-			}
-		}
+		tx.IsCoinBase = isCoinBase(&tx)
 		tx.BlockOrder = block.Order
+		tx.BlockHeight = block.Height
 		txs = append(txs, tx)
 	}
 	return txs

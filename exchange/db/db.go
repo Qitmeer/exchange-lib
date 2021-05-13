@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"github.com/Qitmeer/exchange-lib/exchange/db/base"
 	"github.com/Qitmeer/exchange-lib/exchange/encode"
+	sync2 "github.com/Qitmeer/exchange-lib/sync"
 	"os"
 	"sync"
 )
@@ -17,6 +18,7 @@ const (
 	spent_bucket          = "spent_bucket"
 	result_bucket         = "result_bucket"
 	address_bucket        = "address_bucket"
+	height_bucket         = "height_bucket"
 )
 
 type UTXODB struct {
@@ -272,7 +274,7 @@ func (c *UTXODB) GetAddressUTXO(address string, txId string, vout uint64) (*UTXO
 	return c.getAddressUTXO(address, txId, vout)
 }
 
-func (c *UTXODB) GetAddressUTXOs(address string) ([]*UTXO, uint64, error) {
+func (c *UTXODB) GetAddressUTXOs(address string, coin string, chainMainHeight uint64) ([]*UTXO, uint64, error) {
 	c.mutex.RLock()
 	defer c.mutex.RUnlock()
 
@@ -290,15 +292,20 @@ func (c *UTXODB) GetAddressUTXOs(address string) ([]*UTXO, uint64, error) {
 		if err != nil {
 			return nil, 0, err
 		}
-		if utxo != nil && utxo.Spent == "" {
-			sum += utxo.Amount
-			uxtos = append(uxtos, utxo)
+		if utxo != nil {
+			if utxo.IsCoinBase && chainMainHeight-utxo.Height < sync2.DefaultCoinBaseThreshold {
+				continue
+			}
+			if utxo.Spent == "" && utxo.Coin == coin {
+				sum += utxo.Amount
+				uxtos = append(uxtos, utxo)
+			}
 		}
 	}
 	return uxtos, sum, nil
 }
 
-func (c *UTXODB) GetAddressSpentUTXOs(address string) ([]*UTXO, uint64, error) {
+func (c *UTXODB) GetAddressSpentUTXOs(address string, coin string) ([]*UTXO, uint64, error) {
 	c.mutex.RLock()
 	defer c.mutex.RUnlock()
 
@@ -316,7 +323,7 @@ func (c *UTXODB) GetAddressSpentUTXOs(address string) ([]*UTXO, uint64, error) {
 		if err != nil {
 			return nil, 0, err
 		}
-		if utxo != nil && utxo.Spent != "" {
+		if utxo != nil && utxo.Spent != "" && utxo.Coin == coin {
 			sum += utxo.Amount
 			uxtos = append(uxtos, utxo)
 		}
@@ -324,7 +331,7 @@ func (c *UTXODB) GetAddressSpentUTXOs(address string) ([]*UTXO, uint64, error) {
 	return uxtos, sum, nil
 }
 
-func (c *UTXODB) SumUTXO() (uint64, error) {
+func (c *UTXODB) SumUTXO(coin string) (uint64, error) {
 	c.mutex.RLock()
 	defer c.mutex.RUnlock()
 
@@ -341,19 +348,42 @@ func (c *UTXODB) SumUTXO() (uint64, error) {
 		if err != nil {
 			return 0, err
 		}
-		if utxo.Spent == "" {
+		if utxo.Coin == coin && utxo.Spent == "" {
 			sum += utxo.Amount
 		}
 	}
 	return sum, nil
 }
 
+func (c *UTXODB) UpdateHeight(height uint64) error {
+	c.mutex.Lock()
+	defer c.mutex.Unlock()
+
+	bytes := encode.Uint64ToBytes(height)
+	return c.base.PutInBucket(height_bucket, []byte(height_bucket), bytes)
+}
+
+func (c *UTXODB) GetHeight() (uint64, error) {
+	c.mutex.RLock()
+	defer c.mutex.RUnlock()
+
+	bytes, err := c.base.GetFromBucket(height_bucket, []byte(height_bucket))
+	if err != nil {
+		return 0, err
+	}
+	height := encode.BytesToUint64(bytes)
+	return height, nil
+}
+
 type UTXO struct {
-	TxId    string `json:"txid"`
-	Vout    uint64 `json:"vout"`
-	Address string `json:"address"`
-	Amount  uint64 `json:"amount"`
-	Spent   string `json:"spent"`
+	TxId       string `json:"txid"`
+	Vout       uint64 `json:"vout"`
+	Address    string `json:"address"`
+	Coin       string `json:"coin"`
+	Amount     uint64 `json:"amount"`
+	Spent      string `json:"spent"`
+	Height     uint64 `json:"height"`
+	IsCoinBase bool   `json:"iscoinbase"`
 }
 
 type SpentUTXO struct {

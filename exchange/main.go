@@ -111,13 +111,17 @@ func startSync(storage *db.UTXODB, synchronizer *sync.Synchronizer, wg *sync2.Wa
 					for _, u := range utxos {
 						if storage.AddressIsExist(u.Address) {
 							dbUtxo := &db.UTXO{
-								TxId:    u.TxId,
-								Vout:    uint64(u.TxIndex),
-								Address: u.Address,
-								Amount:  u.Amount,
+								TxId:       u.TxId,
+								Vout:       uint64(u.TxIndex),
+								Address:    u.Address,
+								Amount:     u.Amount,
+								Coin:       u.Coin,
+								Height:     u.Height,
+								IsCoinBase: tx.IsCoinBase,
 							}
 							storage.UpdateAddressUTXO(u.Address, dbUtxo)
 							storage.SaveUTXO(dbUtxo)
+							storage.UpdateHeight(tx.BlockHeight)
 						}
 					}
 					spentTxs := uxto.GetSpentTxs(&tx)
