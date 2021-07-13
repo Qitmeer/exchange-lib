@@ -9,7 +9,8 @@ password="123"
 
 [sync]
 # start sync from block order
-start=503042
+start=0
 # synchronized address list
 address=[
+    "XmkgU8m4G2GwRjz6rEVskG9HAabT5uUS8Fy","XmjA6CZvLPS3tUeveJi6Tw1Fd7MEq45S93K","Xmii5LiL1MaixQ7Dgi7gbC7Kq1iDBTRS9PW"
 ]

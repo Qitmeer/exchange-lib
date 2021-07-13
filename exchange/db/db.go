@@ -296,7 +296,7 @@ func (c *UTXODB) GetAddressUTXOs(address string, coin string, chainMainHeight ui
 			if utxo.IsCoinBase && chainMainHeight-utxo.Height < sync2.DefaultCoinBaseThreshold {
 				continue
 			}
-			if utxo.Spent == "" && utxo.Coin == coin {
+			if utxo.Spent == "" && utxo.Coin == coin && utxo.Lock < chainMainHeight {
 				sum += utxo.Amount
 				uxtos = append(uxtos, utxo)
 			}
@@ -324,6 +324,35 @@ func (c *UTXODB) GetAddressSpentUTXOs(address string, coin string) ([]*UTXO, uin
 			return nil, 0, err
 		}
 		if utxo != nil && utxo.Spent != "" && utxo.Coin == coin {
+			sum += utxo.Amount
+			uxtos = append(uxtos, utxo)
+		}
+	}
+	return uxtos, sum, nil
+}
+
+func (c *UTXODB) GetAddressLockUTXOs(address string, coin string, chainMainHeight uint64) ([]*UTXO, uint64, error) {
+	c.mutex.RLock()
+	defer c.mutex.RUnlock()
+
+	var sum uint64
+	uxtos := []*UTXO{}
+	iter := c.base.Iter(getUTXOBucket(address))
+	defer iter.Release()
+
+	// Iter will affect RLP decoding and reallocate memory to value
+	for iter.Next() {
+		value := make([]byte, len(iter.Value()))
+		copy(value, iter.Value())
+		var utxo *UTXO
+		err := json.Unmarshal(value, &utxo)
+		if err != nil {
+			return nil, 0, err
+		}
+		if utxo.IsCoinBase && chainMainHeight-utxo.Height < sync2.DefaultCoinBaseThreshold {
+			continue
+		}
+		if utxo.Spent == "" && utxo.Coin == coin && utxo.Lock >= chainMainHeight {
 			sum += utxo.Amount
 			uxtos = append(uxtos, utxo)
 		}
@@ -383,6 +412,7 @@ type UTXO struct {
 	Amount     uint64 `json:"amount"`
 	Spent      string `json:"spent"`
 	Height     uint64 `json:"height"`
+	Lock       uint64 `json:"lock"`
 	IsCoinBase bool   `json:"iscoinbase"`
 }
 

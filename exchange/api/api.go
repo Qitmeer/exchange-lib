@@ -32,6 +32,7 @@ func (a *Api) Stop() {
 
 func (a *Api) addApi() {
 	a.rest.AuthRouteSet("api/v1/utxo").Get(a.getUTXO)
+	a.rest.AuthRouteSet("api/v1/utxo/lock").Get(a.getLockUTXO)
 	a.rest.AuthRouteSet("api/v1/utxo/spent").Get(a.getSpentUTXO)
 	a.rest.AuthRouteSet("api/v1/utxo").Post(a.updateUTXO)
 	a.rest.AuthRouteSet("api/v1/transaction").Post(a.sendTransaction)
@@ -78,6 +79,27 @@ func (a *Api) getSpentUTXO(ct *Context) (interface{}, *Error) {
 	return rs, nil
 }
 
+func (a *Api) getLockUTXO(ct *Context) (interface{}, *Error) {
+	addr, ok := ct.Query["address"]
+	if !ok {
+		return nil, &Error{ERROR_UNKNOWN, "address is required"}
+	}
+	coin, ok := ct.Query["coin"]
+	if !ok {
+		return nil, &Error{ERROR_UNKNOWN, "coin is required"}
+	}
+	chainMainHeight, err := a.storage.GetHeight()
+	if err != nil {
+		return nil, &Error{ERROR_UNKNOWN, "no chain height"}
+	}
+	spent, amount, _ := a.storage.GetAddressLockUTXOs(addr, coin, chainMainHeight)
+	rs := map[string]interface{}{
+		"spent":  spent,
+		"amount": amount,
+	}
+	return rs, nil
+}
+
 func (a *Api) updateUTXO(ct *Context) (interface{}, *Error) {
 	txid, _ := ct.Form["txid"]
 	if len(txid) == 0 {
@@ -90,6 +112,14 @@ func (a *Api) updateUTXO(ct *Context) (interface{}, *Error) {
 	amount, _ := ct.Form["amount"]
 	if len(amount) == 0 {
 		return nil, &Error{ERROR_UNKNOWN, "amount is required"}
+	}
+	coin, _ := ct.Form["coin"]
+	if len(coin) == 0 {
+		return nil, &Error{ERROR_UNKNOWN, "coin is required"}
+	}
+	lock, _ := ct.Form["lock"]
+	if len(amount) == 0 {
+		return nil, &Error{ERROR_UNKNOWN, "lock is required"}
 	}
 	address, _ := ct.Form["address"]
 	if len(address) == 0 {
@@ -104,12 +134,18 @@ func (a *Api) updateUTXO(ct *Context) (interface{}, *Error) {
 	if err != nil {
 		return nil, &Error{ERROR_UNKNOWN, "wrong amount"}
 	}
+	iLock, err := strconv.ParseUint(lock, 10, 64)
+	if err != nil {
+		return nil, &Error{ERROR_UNKNOWN, "wrong amount"}
+	}
 	err = a.storage.UpdateAddressUTXOMandatory(address, &db.UTXO{
 		TxId:    txid,
 		Vout:    iVout,
 		Address: address,
+		Coin:    coin,
 		Amount:  iAmount,
 		Spent:   spent,
+		Lock:    iLock,
 	})
 	if err != nil {
 		return nil, &Error{ERROR_UNKNOWN, err.Error()}

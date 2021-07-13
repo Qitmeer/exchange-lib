@@ -106,10 +106,12 @@ func startSync(storage *db.UTXODB, synchronizer *sync.Synchronizer, wg *sync2.Wa
 
 				txs := <-txChan
 				for _, tx := range txs {
+					utxoFlag := false
 					// save tx or uxto
 					utxos := uxto.GetUxtos(&tx)
 					for _, u := range utxos {
 						if storage.AddressIsExist(u.Address) {
+							utxoFlag = true
 							dbUtxo := &db.UTXO{
 								TxId:       u.TxId,
 								Vout:       uint64(u.TxIndex),
@@ -124,19 +126,22 @@ func startSync(storage *db.UTXODB, synchronizer *sync.Synchronizer, wg *sync2.Wa
 							storage.UpdateHeight(tx.BlockHeight)
 						}
 					}
-					spentTxs := uxto.GetSpentTxs(&tx)
-					for _, spentTx := range spentTxs {
-						u, err := storage.GetUTXO(spentTx.TxId, spentTx.Vout)
-						if err != nil {
-							continue
+					if utxoFlag {
+						spentTxs := uxto.GetSpentTxs(&tx)
+						for _, spentTx := range spentTxs {
+							u, err := storage.GetUTXO(spentTx.TxId, spentTx.Vout)
+							if err != nil {
+								continue
+							}
+							// 标记这些utxo已经被花费掉
+							storage.UpdateAddressUTXO(u.Address, &db.UTXO{
+								TxId:   u.TxId,
+								Coin:   u.Coin,
+								Vout:   u.Vout,
+								Amount: u.Amount,
+								Spent:  tx.Txid,
+							})
 						}
-						// 标记这些utxo已经被花费掉
-						storage.UpdateAddressUTXO(u.Address, &db.UTXO{
-							TxId:   u.TxId,
-							Vout:   u.Vout,
-							Amount: u.Amount,
-							Spent:  tx.Txid,
-						})
 					}
 
 					if tx.IsCoinBase && preCoinBaseOrder != tx.BlockOrder {
