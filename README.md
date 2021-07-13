@@ -98,13 +98,18 @@ The Qitmeer API/SDK for PMEER exchanges
 
     |description|url|method|params|
     |:--------------- |:------------------------ |:----- |:-------|
-    |get utxo |api/v1/utxo|GET|address|
-    |send transaction  |api/v1/transaction |POST |raw;spent|
-    |add address  |api/v1/address |POST |address|
+    |get utxo |api/v1/utxo|GET|address;coin|
+    |get lock utxo |api/v1/utxo/lock|GET|address;coin|
+    |get spent utxo |api/v1/utxo/spent|GET|address;coin|
+    |update utxo |api/v1/utxo|POST|`{txid:"","vout":0,"address":"","coin":"","amount":0,"spent":"","lock":""}`|
+    |send transaction  |api/v1/transaction |POST|`{"raw":"","spent":""}`|
+    |add address  |api/v1/address |POST|`{"address":""}`|
+    |get address list|api/v1/address |GET|address|
+    |address utxo|api/v1/address |GET|address;txid;vout|
 
 - >Example 
 
-  ##### api/v1/utxo
+  ##### api/v1/utxo?address="Tmax8njWbgrz4oagPBtQTzRMmDkUUPcVV3e"&&coin="MEER"
   ```json
     {
     "code": 0,
