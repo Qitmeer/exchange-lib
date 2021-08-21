@@ -84,8 +84,9 @@ func startSync(storage *db.UTXODB, synchronizer *sync.Synchronizer, wg *sync2.Wa
 	}
 
 	txChan, err := synchronizer.Start(&sync.HistoryOrder{
-		start,
-		coinBaseStart,
+		LastTxBlockOrder:       start,
+		LastCoinBaseBlockOrder: coinBaseStart,
+		Confirmations:          conf.Setting.Sync.Confirmations,
 	})
 	if err != nil {
 		log.Errorf("Failed to start sync block, %s", err.Error())

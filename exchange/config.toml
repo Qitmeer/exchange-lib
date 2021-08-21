@@ -10,6 +10,8 @@ password="123"
 [sync]
 # start sync from block order
 start=503042
+confirmations=5
 # synchronized address list
 address=[
+
 ]

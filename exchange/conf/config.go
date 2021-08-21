@@ -42,8 +42,9 @@ type Rpc struct {
 }
 
 type Sync struct {
-	Start   uint64   `toml:"start"`
-	Address []string `toml:"address"`
+	Start         uint64   `toml:"start"`
+	Confirmations uint64   `toml:"confirmations"`
+	Address       []string `toml:"address"`
 }
 
 func Exist(fileName string) bool {
