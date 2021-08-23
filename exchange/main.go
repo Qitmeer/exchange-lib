@@ -27,6 +27,12 @@ func main() {
 		fmt.Println("failed to open db, ", err)
 		os.Exit(1)
 	}
+	log.SetOption(&log.Option{
+		LogLevel: conf.Setting.Log.Level,
+		Mode:     conf.Setting.Log.Mode,
+		Email:    &log.EMailOption{},
+		Path:     conf.Setting.Log.Path,
+	})
 
 	opt := &sync.Options{
 		RpcAddr: conf.Setting.Rpc.Host,
@@ -84,8 +90,9 @@ func startSync(storage *db.UTXODB, synchronizer *sync.Synchronizer, wg *sync2.Wa
 	}
 
 	txChan, err := synchronizer.Start(&sync.HistoryOrder{
-		start,
-		coinBaseStart,
+		LastTxBlockOrder:       start,
+		LastCoinBaseBlockOrder: coinBaseStart,
+		Confirmations:          conf.Setting.Sync.Confirmations,
 	})
 	if err != nil {
 		log.Errorf("Failed to start sync block, %s", err.Error())

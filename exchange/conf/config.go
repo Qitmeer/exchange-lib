@@ -3,6 +3,7 @@ package conf
 import (
 	"fmt"
 	"github.com/BurntSushi/toml"
+	"github.com/bCoder778/log"
 	"os"
 	"sync"
 )
@@ -28,6 +29,7 @@ type Config struct {
 	Api  *Api  `toml:"api"`
 	Rpc  *Rpc  `toml:"rpc"`
 	Sync *Sync `toml:"sync"`
+	Log  *Log  `toml:"log"`
 }
 
 type Api struct {
@@ -42,8 +44,15 @@ type Rpc struct {
 }
 
 type Sync struct {
-	Start   uint64   `toml:"start"`
-	Address []string `toml:"address"`
+	Start         uint64   `toml:"start"`
+	Confirmations uint64   `toml:"confirmations"`
+	Address       []string `toml:"address"`
+}
+
+type Log struct {
+	Mode  log.Mode  `toml:"mode"`
+	Level log.Level `toml:"level"`
+	Path  string    `toml:"path"`
 }
 
 func Exist(fileName string) bool {

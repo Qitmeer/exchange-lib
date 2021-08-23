@@ -39,6 +39,7 @@ type Options struct {
 type HistoryOrder struct {
 	LastTxBlockOrder       uint64
 	LastCoinBaseBlockOrder uint64
+	Confirmations          uint64
 }
 
 func NewSynchronizer(opt *Options) *Synchronizer {
@@ -70,12 +71,12 @@ func NewSynchronizer(opt *Options) *Synchronizer {
 
 // start syncing at 0
 // or start syncing at last stop return id
-func (s *Synchronizer) Start(order *HistoryOrder) (<-chan []rpc.Transaction, error) {
-	if err := s.setThreshold(); err != nil {
+func (s *Synchronizer) Start(info *HistoryOrder) (<-chan []rpc.Transaction, error) {
+	if err := s.setThreshold(info.Confirmations); err != nil {
 		return nil, fmt.Errorf("failed to set threshold %s", err.Error())
 	}
 
-	go s.startSync(order)
+	go s.startSync(info)
 
 	return s.txChannel, nil
 }
@@ -210,13 +211,18 @@ type threshold struct {
 	transactionThreshold uint32
 }
 
-func (s *Synchronizer) setThreshold() error {
+func (s *Synchronizer) setThreshold(confirmations uint64) error {
 	nodeInfo, err := s.rpcClient.GetNodeInfo()
 	if err != nil {
 		return err
 	}
+	if confirmations != 0 {
+		s.threshold.transactionThreshold = uint32(confirmations)
+	} else {
+		s.threshold.transactionThreshold = nodeInfo.Confirmations
+	}
 	s.threshold.coinBaseThreshold = nodeInfo.Coinbasematurity
-	s.threshold.transactionThreshold = nodeInfo.Confirmations
+
 	return nil
 }
 

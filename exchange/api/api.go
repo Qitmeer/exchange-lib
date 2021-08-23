@@ -1,9 +1,14 @@
 package api
 
 import (
+	"bytes"
+	"encoding/hex"
 	"encoding/json"
+	"fmt"
 	"github.com/Qitmeer/exchange-lib/exchange/db"
 	"github.com/Qitmeer/exchange-lib/sync"
+	"github.com/Qitmeer/qitmeer/core/types"
+	"github.com/bCoder778/log"
 	"strconv"
 )
 
@@ -38,6 +43,8 @@ func (a *Api) addApi() {
 	a.rest.AuthRouteSet("api/v1/address").Post(a.addAddress)
 	a.rest.AuthRouteSet("api/v1/address").Get(a.getAddress)
 	a.rest.AuthRouteSet("api/v1/address/utxo").Get(a.getAddressUTXO)
+
+	a.rest.AuthRouteSet("api/v2/transaction").Post(a.sendTransactionV2)
 }
 
 func (a *Api) getUTXO(ct *Context) (interface{}, *Error) {
@@ -124,8 +131,8 @@ func (a *Api) sendTransaction(ct *Context) (interface{}, *Error) {
 	}
 	txId, err := a.synchronizer.SendTx(raw)
 	if err == nil {
-
 		for _, utxo := range utxoList {
+			log.Debugf("param spent spentTxId=%s, spentTxVout=%d", utxo.TxId, utxo.Vout)
 			utxo.Spent = txId
 			a.storage.UpdateAddressUTXO(utxo.Address, utxo)
 		}
@@ -138,6 +145,59 @@ func (a *Api) sendTransaction(ct *Context) (interface{}, *Error) {
 		return nil, &Error{ERROR_UNKNOWN, err.Error()}
 	}
 	return txId, nil
+}
+
+func (a *Api) sendTransactionV2(ct *Context) (interface{}, *Error) {
+	raw, ok := ct.Form["raw"]
+	if !ok {
+		return nil, &Error{ERROR_UNKNOWN, "raw is required"}
+	}
+	tx, err := TxDecode(raw)
+	if err != nil {
+		return nil, &Error{ERROR_UNKNOWN, err.Error()}
+	}
+	txId, err := a.synchronizer.SendTx(raw)
+	if err == nil {
+		decodeUtxoList := []*db.UTXO{}
+		for _, vin := range tx.TxIn {
+			spentedTxId := vin.PreviousOut.Hash.String()
+			vout := vin.PreviousOut.OutIndex
+			utxo, err := a.storage.GetUTXO(spentedTxId, uint64(vout))
+			if err != nil {
+				log.Errorf("can not found txid=%s, vout=%d", spentedTxId, vout)
+				continue
+			}
+			utxo.Spent = txId
+			a.storage.UpdateAddressUTXO(utxo.Address, utxo)
+			decodeUtxoList = append(decodeUtxoList, utxo)
+			log.Debugf("update txid=%s vout=%d spent", spentedTxId, vout)
+		}
+		spentUtxo := &db.SpentUTXO{
+			SpentTxId: txId,
+			UTXOList:  decodeUtxoList,
+		}
+		a.storage.InsertSpentUTXO(spentUtxo)
+	} else {
+		return nil, &Error{ERROR_UNKNOWN, err.Error()}
+	}
+	return txId, nil
+}
+
+func TxDecode(rawTxStr string) (*types.Transaction, error) {
+	if len(rawTxStr)%2 != 0 {
+		return nil, fmt.Errorf("invaild raw transaction : %s", rawTxStr)
+	}
+	serializedTx, err := hex.DecodeString(rawTxStr)
+	if err != nil {
+		return nil, err
+	}
+	var tx types.Transaction
+	err = tx.Deserialize(bytes.NewReader(serializedTx))
+	if err != nil {
+		return nil, err
+	}
+
+	return &tx, nil
 }
 
 func (a *Api) addAddress(ct *Context) (interface{}, *Error) {
