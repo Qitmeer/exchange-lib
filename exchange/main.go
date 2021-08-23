@@ -27,6 +27,12 @@ func main() {
 		fmt.Println("failed to open db, ", err)
 		os.Exit(1)
 	}
+	log.SetOption(&log.Option{
+		LogLevel: conf.Setting.Log.Level,
+		Mode:     conf.Setting.Log.Mode,
+		Email:    &log.EMailOption{},
+		Path:     conf.Setting.Log.Path,
+	})
 
 	opt := &sync.Options{
 		RpcAddr: conf.Setting.Rpc.Host,

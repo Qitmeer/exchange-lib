@@ -1,9 +1,14 @@
 package api
 
 import (
+	"bytes"
+	"encoding/hex"
 	"encoding/json"
+	"fmt"
 	"github.com/Qitmeer/exchange-lib/exchange/db"
 	"github.com/Qitmeer/exchange-lib/sync"
+	"github.com/Qitmeer/qitmeer/core/types"
+	"github.com/bCoder778/log"
 	"strconv"
 )
 
@@ -118,26 +123,58 @@ func (a *Api) sendTransaction(ct *Context) (interface{}, *Error) {
 		return nil, &Error{ERROR_UNKNOWN, "spent is required"}
 	}
 	utxoList := []*db.UTXO{}
-	err := json.Unmarshal([]byte(utxos), &utxoList)
+	_ = json.Unmarshal([]byte(utxos), &utxoList)
+	for _, utxo := range utxoList {
+		log.Debugf("param spent spentTxId=%s, spentTxVout=%d", utxo.TxId, utxo.Vout)
+		//utxo.Spent = txId
+		//a.storage.UpdateAddressUTXO(utxo.Address, utxo)
+	}
+	tx, err := TxDecode(raw)
 	if err != nil {
 		return nil, &Error{ERROR_UNKNOWN, err.Error()}
 	}
 	txId, err := a.synchronizer.SendTx(raw)
 	if err == nil {
-
-		for _, utxo := range utxoList {
+		decodeUtxoList := []*db.UTXO{}
+		for _, vin := range tx.TxIn {
+			spentedTxId := vin.PreviousOut.Hash.String()
+			vout := vin.PreviousOut.OutIndex
+			utxo, err := a.storage.GetUTXO(spentedTxId, uint64(vout))
+			if err != nil {
+				log.Errorf("can not found txid=%s, vout=%d", spentedTxId, vout)
+				continue
+			}
 			utxo.Spent = txId
 			a.storage.UpdateAddressUTXO(utxo.Address, utxo)
+			decodeUtxoList = append(decodeUtxoList, utxo)
+			log.Debugf("update txid=%s vout=%d spent", spentedTxId, vout)
 		}
 		spentUtxo := &db.SpentUTXO{
 			SpentTxId: txId,
-			UTXOList:  utxoList,
+			UTXOList:  decodeUtxoList,
 		}
 		a.storage.InsertSpentUTXO(spentUtxo)
 	} else {
 		return nil, &Error{ERROR_UNKNOWN, err.Error()}
 	}
 	return txId, nil
+}
+
+func TxDecode(rawTxStr string) (*types.Transaction, error) {
+	if len(rawTxStr)%2 != 0 {
+		return nil, fmt.Errorf("invaild raw transaction : %s", rawTxStr)
+	}
+	serializedTx, err := hex.DecodeString(rawTxStr)
+	if err != nil {
+		return nil, err
+	}
+	var tx types.Transaction
+	err = tx.Deserialize(bytes.NewReader(serializedTx))
+	if err != nil {
+		return nil, err
+	}
+
+	return &tx, nil
 }
 
 func (a *Api) addAddress(ct *Context) (interface{}, *Error) {

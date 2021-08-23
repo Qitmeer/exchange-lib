@@ -13,5 +13,12 @@ start=503042
 confirmations=5
 # synchronized address list
 address=[
-
+    ""
 ]
+
+[log]
+# console=12 | file=11
+mode=11
+# debug=0 | info=1 | warn=2 | fail=3 | error=4 | email=5
+level=0
+path="logs"
