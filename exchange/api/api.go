@@ -43,6 +43,8 @@ func (a *Api) addApi() {
 	a.rest.AuthRouteSet("api/v1/address").Post(a.addAddress)
 	a.rest.AuthRouteSet("api/v1/address").Get(a.getAddress)
 	a.rest.AuthRouteSet("api/v1/address/utxo").Get(a.getAddressUTXO)
+
+	a.rest.AuthRouteSet("api/v2/transaction").Post(a.sendTransactionV2)
 }
 
 func (a *Api) getUTXO(ct *Context) (interface{}, *Error) {
@@ -123,11 +125,32 @@ func (a *Api) sendTransaction(ct *Context) (interface{}, *Error) {
 		return nil, &Error{ERROR_UNKNOWN, "spent is required"}
 	}
 	utxoList := []*db.UTXO{}
-	_ = json.Unmarshal([]byte(utxos), &utxoList)
-	for _, utxo := range utxoList {
-		log.Debugf("param spent spentTxId=%s, spentTxVout=%d", utxo.TxId, utxo.Vout)
-		//utxo.Spent = txId
-		//a.storage.UpdateAddressUTXO(utxo.Address, utxo)
+	err := json.Unmarshal([]byte(utxos), &utxoList)
+	if err != nil {
+		return nil, &Error{ERROR_UNKNOWN, err.Error()}
+	}
+	txId, err := a.synchronizer.SendTx(raw)
+	if err == nil {
+		for _, utxo := range utxoList {
+			log.Debugf("param spent spentTxId=%s, spentTxVout=%d", utxo.TxId, utxo.Vout)
+			utxo.Spent = txId
+			a.storage.UpdateAddressUTXO(utxo.Address, utxo)
+		}
+		spentUtxo := &db.SpentUTXO{
+			SpentTxId: txId,
+			UTXOList:  utxoList,
+		}
+		a.storage.InsertSpentUTXO(spentUtxo)
+	} else {
+		return nil, &Error{ERROR_UNKNOWN, err.Error()}
+	}
+	return txId, nil
+}
+
+func (a *Api) sendTransactionV2(ct *Context) (interface{}, *Error) {
+	raw, ok := ct.Form["raw"]
+	if !ok {
+		return nil, &Error{ERROR_UNKNOWN, "raw is required"}
 	}
 	tx, err := TxDecode(raw)
 	if err != nil {
