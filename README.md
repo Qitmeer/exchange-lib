@@ -98,18 +98,19 @@ The Qitmeer API/SDK for PMEER exchanges
 
     |description|url|method|params|
     |:--------------- |:------------------------ |:----- |:-------|
-    |get utxo |api/v1/utxo|GET|address;coin|
-    |get lock utxo |api/v1/utxo/lock|GET|address;coin|
-    |get spent utxo |api/v1/utxo/spent|GET|address;coin|
+    |get utxo |api/v1/utxo|GET|address=XXX&coin=MEER|
+    |get lock utxo |api/v1/utxo/lock|GET|address=XXX&coin=MEER|
+    |get spent utxo |api/v1/utxo/spent|GET|address=XXX&coin=MEER|
     |update utxo |api/v1/utxo|POST|`{txid:"","vout":0,"address":"","coin":"","amount":0,"spent":"","lock":""}`|
     |send transaction  |api/v1/transaction |POST|`{"raw":"","spent":""}`|
-    |add address  |api/v1/address |POST|`{"address":""}`|
-    |get address list|api/v1/address |GET|address|
-    |address utxo|api/v1/address |GET|address;txid;vout|
+    |send transaction V2|api/v2/transaction |POST|`{"raw":""}`|
+    |add address  |api/v1/address |POST|`{"address":"XXXX"}`|
+    |get address list|api/v1/address |GET|
+    |address utxo|api/v1/address |GET|address=XXX&txid=XXXX&vout=0|
 
 - >Example 
 
-  ##### api/v1/utxo?address="Tmax8njWbgrz4oagPBtQTzRMmDkUUPcVV3e"&&coin="MEER"
+  ##### api/v1/utxo?address="Tmax8njWbgrz4oagPBtQTzRMmDkUUPcVV3e"&coin="MEER"
   ```json
     {
     "code": 0,

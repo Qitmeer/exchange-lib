@@ -1,6 +1,7 @@
 package main
 
 import (
+	"encoding/hex"
 	"flag"
 	"fmt"
 	"github.com/Qitmeer/exchange-lib/exchange/api"
@@ -20,6 +21,8 @@ import (
 var interrupt chan struct{}
 
 func main() {
+	x, err := hex.DecodeString("03b44c010838eb802400e6edbc3c30302e31302e3431365569753248416d3466695437727836675a77536d6b77676d764573634b517244456444796a684d58766a34395977614439393")
+	fmt.Println(string(x), err)
 	dealCommand()
 
 	db, err := openDB("data")
@@ -72,20 +75,15 @@ func startSync(storage *db.UTXODB, synchronizer *sync.Synchronizer, wg *sync2.Wa
 	}
 
 	start := conf.Setting.Sync.Start
-	coinBaseStart := conf.Setting.Sync.Start
-	lastCoinBaseOrder := storage.LastCoinBaseBlockOrder()
 	lastOrder := storage.LastBlockOrder()
 	if lastOrder != 0 {
 		start = lastOrder
 	}
 
-	if lastCoinBaseOrder != 0 {
-		coinBaseStart = lastCoinBaseOrder
-	}
 
 	txChan, err := synchronizer.Start(&sync.HistoryOrder{
-		start,
-		coinBaseStart,
+		LastTxBlockOrder:       start,
+		Confirmations:          conf.Setting.Sync.Confirmations,
 	})
 	if err != nil {
 		log.Errorf("Failed to start sync block, %s", err.Error())
@@ -94,7 +92,7 @@ func startSync(storage *db.UTXODB, synchronizer *sync.Synchronizer, wg *sync2.Wa
 
 	go dealSpent(storage, synchronizer)
 
-	var preOrder, preCoinBaseOrder uint64
+	var preOrder uint64
 	go func() {
 		for {
 			select {
@@ -106,6 +104,7 @@ func startSync(storage *db.UTXODB, synchronizer *sync.Synchronizer, wg *sync2.Wa
 
 				txs := <-txChan
 				for _, tx := range txs {
+					storage.UpdateHeight(tx.BlockHeight)
 					utxoFlag := false
 					// save tx or uxto
 					utxos := uxto.GetUxtos(&tx)
@@ -123,7 +122,6 @@ func startSync(storage *db.UTXODB, synchronizer *sync.Synchronizer, wg *sync2.Wa
 							}
 							storage.UpdateAddressUTXO(u.Address, dbUtxo)
 							storage.SaveUTXO(dbUtxo)
-							storage.UpdateHeight(tx.BlockHeight)
 						}
 					}
 					if utxoFlag {
@@ -144,16 +142,11 @@ func startSync(storage *db.UTXODB, synchronizer *sync.Synchronizer, wg *sync2.Wa
 						}
 					}
 
-					if tx.IsCoinBase && preCoinBaseOrder != tx.BlockOrder {
-						preCoinBaseOrder = tx.BlockOrder
-						storage.UpdateCoinBaseLastOrder(preCoinBaseOrder)
-						log.Infof("Sync CoinBase tx block order %d", preCoinBaseOrder)
-					} else if preOrder != tx.BlockOrder {
+					if preOrder != tx.BlockOrder {
 						preOrder = tx.BlockOrder
 						storage.UpdateLastOrder(preOrder)
 						log.Infof("Sync tx block order %d", preOrder)
 					}
-
 				}
 			}
 
@@ -162,7 +155,7 @@ func startSync(storage *db.UTXODB, synchronizer *sync.Synchronizer, wg *sync2.Wa
 }
 
 func dealSpent(storage *db.UTXODB, synchronizer *sync.Synchronizer) {
-	t := time.NewTicker(time.Second * 5 * 60)
+	t := time.NewTicker(time.Second * 3 * 60 * 60)
 	defer t.Stop()
 
 	for {
@@ -173,7 +166,7 @@ func dealSpent(storage *db.UTXODB, synchronizer *sync.Synchronizer) {
 		case <-t.C:
 			spents := storage.GetSpents()
 			for _, spent := range spents {
-				_, err := synchronizer.SendTx(spent.SpentTxId)
+				_, err := synchronizer.GetTx(spent.SpentTxId)
 				if err != nil && isNoTx(err) {
 					for _, utxo := range spent.UTXOList {
 						utxo.Spent = ""

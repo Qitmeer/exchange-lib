@@ -1,5 +1,8 @@
 
 exchange/data/
+exchange/data1/
+exchange/data2/
+exchange/logs/
 exchange/bin
 /data
 exchange/data/MANIFEST-000004
