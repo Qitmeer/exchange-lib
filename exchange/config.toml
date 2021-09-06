@@ -2,23 +2,23 @@
 listen="0.0.0.0:11360"
 
 [rpc]
-host="127.0.0.1:1234"
+host="127.0.0.1"
 tls=false
-admin="admin"
-password="123"
+admin="test"
+password="test"
 
 [sync]
 # start sync from block order
-start=503042
+start=0
 confirmations=5
 # synchronized address list
 address=[
-    ""
+    "TnU8gXq9xHFrfchwk2bjyGHR2HMswANsVU5"
 ]
 
 [log]
 # console=12 | file=11
-mode=11
+mode=12
 # debug=0 | info=1 | warn=2 | fail=3 | error=4 | email=5
 level=0
 path="logs"

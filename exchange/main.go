@@ -30,10 +30,8 @@ func main() {
 	log.SetOption(&log.Option{
 		LogLevel: conf.Setting.Log.Level,
 		Mode:     conf.Setting.Log.Mode,
-		Email:    &log.EMailOption{},
 		Path:     conf.Setting.Log.Path,
 	})
-
 	opt := &sync.Options{
 		RpcAddr: conf.Setting.Rpc.Host,
 		RpcUser: conf.Setting.Rpc.Admin,
@@ -78,20 +76,14 @@ func startSync(storage *db.UTXODB, synchronizer *sync.Synchronizer, wg *sync2.Wa
 	}
 
 	start := conf.Setting.Sync.Start
-	coinBaseStart := conf.Setting.Sync.Start
-	lastCoinBaseOrder := storage.LastCoinBaseBlockOrder()
 	lastOrder := storage.LastBlockOrder()
 	if lastOrder != 0 {
 		start = lastOrder
 	}
 
-	if lastCoinBaseOrder != 0 {
-		coinBaseStart = lastCoinBaseOrder
-	}
 
 	txChan, err := synchronizer.Start(&sync.HistoryOrder{
 		LastTxBlockOrder:       start,
-		LastCoinBaseBlockOrder: coinBaseStart,
 		Confirmations:          conf.Setting.Sync.Confirmations,
 	})
 	if err != nil {
@@ -101,7 +93,7 @@ func startSync(storage *db.UTXODB, synchronizer *sync.Synchronizer, wg *sync2.Wa
 
 	go dealSpent(storage, synchronizer)
 
-	var preOrder, preCoinBaseOrder uint64
+	var preOrder uint64
 	go func() {
 		for {
 			select {
@@ -113,45 +105,49 @@ func startSync(storage *db.UTXODB, synchronizer *sync.Synchronizer, wg *sync2.Wa
 
 				txs := <-txChan
 				for _, tx := range txs {
+					storage.UpdateHeight(tx.BlockHeight)
+					utxoFlag := false
 					// save tx or uxto
 					utxos := uxto.GetUxtos(&tx)
 					for _, u := range utxos {
 						if storage.AddressIsExist(u.Address) {
+							utxoFlag = true
 							dbUtxo := &db.UTXO{
-								TxId:    u.TxId,
-								Vout:    uint64(u.TxIndex),
-								Address: u.Address,
-								Amount:  u.Amount,
+								TxId:       u.TxId,
+								Vout:       uint64(u.TxIndex),
+								Address:    u.Address,
+								Amount:     u.Amount,
+								Coin:       u.Coin,
+								Height:     u.Height,
+								IsCoinBase: tx.IsCoinBase,
 							}
 							storage.UpdateAddressUTXO(u.Address, dbUtxo)
 							storage.SaveUTXO(dbUtxo)
 						}
 					}
-					spentTxs := uxto.GetSpentTxs(&tx)
-					for _, spentTx := range spentTxs {
-						u, err := storage.GetUTXO(spentTx.TxId, spentTx.Vout)
-						if err != nil {
-							continue
+					if utxoFlag {
+						spentTxs := uxto.GetSpentTxs(&tx)
+						for _, spentTx := range spentTxs {
+							u, err := storage.GetUTXO(spentTx.TxId, spentTx.Vout)
+							if err != nil {
+								continue
+							}
+							// 标记这些utxo已经被花费掉
+							storage.UpdateAddressUTXO(u.Address, &db.UTXO{
+								TxId:   u.TxId,
+								Coin:   u.Coin,
+								Vout:   u.Vout,
+								Amount: u.Amount,
+								Spent:  tx.Txid,
+							})
 						}
-						// 标记这些utxo已经被花费掉
-						storage.UpdateAddressUTXO(u.Address, &db.UTXO{
-							TxId:   u.TxId,
-							Vout:   u.Vout,
-							Amount: u.Amount,
-							Spent:  tx.Txid,
-						})
 					}
 
-					if tx.IsCoinBase && preCoinBaseOrder != tx.BlockOrder {
-						preCoinBaseOrder = tx.BlockOrder
-						storage.UpdateCoinBaseLastOrder(preCoinBaseOrder)
-						log.Infof("Sync CoinBase tx block order %d", preCoinBaseOrder)
-					} else if preOrder != tx.BlockOrder {
+					if preOrder != tx.BlockOrder {
 						preOrder = tx.BlockOrder
 						storage.UpdateLastOrder(preOrder)
 						log.Infof("Sync tx block order %d", preOrder)
 					}
-
 				}
 			}
 
@@ -160,7 +156,7 @@ func startSync(storage *db.UTXODB, synchronizer *sync.Synchronizer, wg *sync2.Wa
 }
 
 func dealSpent(storage *db.UTXODB, synchronizer *sync.Synchronizer) {
-	t := time.NewTicker(time.Second * 5 * 60)
+	t := time.NewTicker(time.Second * 3 * 60 * 60)
 	defer t.Stop()
 
 	for {
@@ -171,11 +167,13 @@ func dealSpent(storage *db.UTXODB, synchronizer *sync.Synchronizer) {
 		case <-t.C:
 			spents := storage.GetSpents()
 			for _, spent := range spents {
-				_, err := synchronizer.SendTx(spent.SpentTxId)
-				if err != nil && isNoTx(err) {
+				_, err := synchronizer.GetTx(spent.SpentTxId)
+				if err != nil && isNoTx(err)  {
+					log.Debugf("could not found tx %s", spent.SpentTxId)
 					for _, utxo := range spent.UTXOList {
 						utxo.Spent = ""
 						err = storage.UpdateAddressUTXOMandatory(utxo.Address, utxo)
+						log.Debugf("update utxo %s %d unspent", utxo.TxId, utxo.Vout)
 						if err == nil {
 							storage.DeleteSpentUTXO(spent.SpentTxId)
 						}
