@@ -1,6 +1,7 @@
 package sync
 
 import (
+	"errors"
 	"fmt"
 	"github.com/Qitmeer/exchange-lib/rpc"
 	"github.com/bCoder778/log"
@@ -11,7 +12,7 @@ const (
 	defaultHost                 = "127.0.0.1:1234"
 	defaultTxChLen              = 100
 	defaultRepeatCount          = 5
-	defaultCoinBaseThreshold    = 720
+	DefaultCoinBaseThreshold    = 720
 	defaultTransactionThreshold = 10
 )
 
@@ -21,9 +22,7 @@ type Synchronizer struct {
 	threshold             *threshold
 	txChannel             chan []rpc.Transaction
 	stopSyncTxCh          chan bool
-	stopSyncCoinBaseCh    chan bool
 	curTxBlockOrder       uint64
-	curCoinBaseBlockOrder uint64
 }
 
 type Options struct {
@@ -38,7 +37,6 @@ type Options struct {
 
 type HistoryOrder struct {
 	LastTxBlockOrder       uint64
-	LastCoinBaseBlockOrder uint64
 	Confirmations          uint64
 }
 
@@ -61,9 +59,8 @@ func NewSynchronizer(opt *Options) *Synchronizer {
 		opt:                opt,
 		txChannel:          make(chan []rpc.Transaction, opt.TxChLen),
 		stopSyncTxCh:       make(chan bool),
-		stopSyncCoinBaseCh: make(chan bool),
 		threshold: &threshold{
-			coinBaseThreshold:    defaultCoinBaseThreshold,
+			coinBaseThreshold:    DefaultCoinBaseThreshold,
 			transactionThreshold: defaultTransactionThreshold,
 		},
 	}
@@ -90,7 +87,6 @@ func (s *Synchronizer) Stop() {
 func (s *Synchronizer) GetHistoryOrder() *HistoryOrder {
 	return &HistoryOrder{
 		LastTxBlockOrder:       s.curTxBlockOrder,
-		LastCoinBaseBlockOrder: s.curCoinBaseBlockOrder,
 	}
 }
 
@@ -102,12 +98,6 @@ func (s *Synchronizer) startSync(hisOrder *HistoryOrder) {
 		s.curTxBlockOrder = 0
 	}
 
-	s.curCoinBaseBlockOrder = hisOrder.LastCoinBaseBlockOrder
-	if s.curCoinBaseBlockOrder >= defaultRepeatCount {
-		s.curCoinBaseBlockOrder -= defaultRepeatCount
-	} else {
-		s.curCoinBaseBlockOrder = 0
-	}
 
 	go s.SyncTxs()
 	//go s.SyncCoinBaseTx()
@@ -115,38 +105,6 @@ func (s *Synchronizer) startSync(hisOrder *HistoryOrder) {
 
 func (s *Synchronizer) SyncTxs() {
 	s.requestTxs()
-}
-
-func (s *Synchronizer) SyncCoinBaseTx() {
-	for {
-		select {
-		case _ = <-s.stopSyncCoinBaseCh:
-			log.Infof("stop sync coinbase tx")
-			return
-		default:
-			block, err := s.rpcClient.GetBlockByOrder(s.curCoinBaseBlockOrder)
-			if err != nil {
-				time.Sleep(time.Second * 30)
-				break
-			}
-			if !s.isBlockConfirmed(block) {
-				time.Sleep(time.Second * 1)
-				break
-			}
-			if usable, err := s.IsCoinBaseUsable(block); err != nil {
-				time.Sleep(time.Second * 5)
-				break
-			} else {
-				if usable {
-					txs := getConfirmedCoinBase(block)
-					if len(txs) != 0 {
-						s.txChannel <- txs
-					}
-				}
-				s.curCoinBaseBlockOrder++
-			}
-		}
-	}
 }
 
 func (s *Synchronizer) requestTxs() {
@@ -163,14 +121,18 @@ func (s *Synchronizer) requestTxs() {
 			}
 			if s.isTxConfirmed(block) {
 				if block.Txsvalid {
-					txs := s.getConfirmedTx(block)
-					if len(txs) != 0 {
-						s.txChannel <- txs
+					if isBlue, err := s.IsCoinBaseUsable(block); err == nil {
+						txs := s.getConfirmedTx(block, isBlue)
+						if len(txs) != 0 {
+							s.txChannel <- txs
+						}
+						s.curTxBlockOrder++
+					} else {
+						time.Sleep(time.Second * 30)
 					}
+				}else{
+					s.curTxBlockOrder++
 				}
-				s.curTxBlockOrder++
-			} else {
-				time.Sleep(time.Second * 30)
 			}
 		}
 	}
@@ -195,7 +157,7 @@ func (s *Synchronizer) IsCoinBaseUsable(block *rpc.Block) (bool, error) {
 	case 1:
 		return true, nil
 	}
-	return false, nil
+	return false, errors.New("unkonwn")
 }
 
 func (s *Synchronizer) SendTx(raw string) (string, error) {
@@ -226,19 +188,18 @@ func (s *Synchronizer) setThreshold(confirmations uint64) error {
 	return nil
 }
 
-func (s *Synchronizer) getConfirmedTx(block *rpc.Block) []rpc.Transaction {
+func (s *Synchronizer) getConfirmedTx(block *rpc.Block, isBlue bool) []rpc.Transaction {
 	txs := []rpc.Transaction{}
 	for _, tx := range block.Transactions {
 		if tx.Duplicate {
 			continue
 		}
-		if isCoinBase(&tx) {
-			ok, _ := s.IsCoinBaseUsable(block)
-			if !ok {
-				continue
-			}
+		tx.IsCoinBase = isCoinBase(&tx)
+		if tx.IsCoinBase && !isBlue{
+			continue
 		}
 		tx.BlockOrder = block.Order
+		tx.BlockHeight = block.Height
 		txs = append(txs, tx)
 	}
 	return txs

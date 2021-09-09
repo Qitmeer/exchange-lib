@@ -29,7 +29,7 @@ type Config struct {
 	Api  *Api  `toml:"api"`
 	Rpc  *Rpc  `toml:"rpc"`
 	Sync *Sync `toml:"sync"`
-	Log  *Log  `toml:"log"`
+	Log *Log `toml:"log"`
 }
 
 type Api struct {
@@ -47,6 +47,7 @@ type Sync struct {
 	Start         uint64   `toml:"start"`
 	Confirmations uint64   `toml:"confirmations"`
 	Address       []string `toml:"address"`
+	Log           *Log     `toml:"log"`
 }
 
 type Log struct {

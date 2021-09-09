@@ -16,7 +16,7 @@ func TestSynchronizer_Start(t *testing.T) {
 		TxChLen: 100,
 	}
 	synchronizer := NewSynchronizer(opt)
-	txChan, err := synchronizer.Start(&HistoryOrder{0, 0})
+	txChan, err := synchronizer.Start(&HistoryOrder{0,  10})
 	if err != nil {
 		fmt.Printf(err.Error())
 		return
