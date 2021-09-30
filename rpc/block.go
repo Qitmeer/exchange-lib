@@ -11,6 +11,7 @@ type Block struct {
 	Confirmations uint32        `json:"confirmations"`
 	Version       uint32        `json:"version"`
 	Order         uint64        `json:"order"`
+	Height        uint64        `json:"height"`
 	TxRoot        string        `json:"txRoot"`
 	Transactions  []Transaction `json:"transactions"`
 	StateRoot     string        `json:"stateroot"`
@@ -35,6 +36,7 @@ type Transaction struct {
 	Vin           []Vin     `json:"vin"`
 	Vout          []Vout    `json:"vout"`
 	Blockhash     string    `json:"blockhash"`
+	BlockHeight   uint64    `json:"-"`
 	BlockOrder    uint64    `json:"-"`
 	Duplicate     bool      `json:"duplicate"`
 	Confirmations uint32    `json:"confirmations"`
@@ -59,6 +61,8 @@ type ScriptSig struct {
 }
 
 type Vout struct {
+	Coin         string       `json:"coin"`
+	CoinId       uint16       `json:"coinid"`
 	Amount       uint64       `json:"amount"`
 	ScriptPubKey ScriptPubKey `json:"scriptpubkey"`
 }

@@ -3,10 +3,13 @@ package uxto
 import "github.com/Qitmeer/exchange-lib/rpc"
 
 type Utxo struct {
+	Coin    string
+	CoinId  uint16
 	TxId    string
 	TxIndex uint32
 	Amount  uint64
 	Address string
+	Height  uint64
 }
 
 type Spent struct {
@@ -20,8 +23,11 @@ func GetUxtos(tx *rpc.Transaction) []*Utxo {
 		utxos[i] = &Utxo{
 			TxId:    tx.Txid,
 			TxIndex: uint32(i),
+			Coin:    out.Coin,
+			CoinId:  out.CoinId,
 			Amount:  out.Amount,
 			Address: out.ScriptPubKey.Addresses[0],
+			Height:  tx.BlockHeight,
 		}
 	}
 	return utxos
@@ -36,8 +42,11 @@ func GetAddressUxtos(tx *rpc.Transaction, address map[string]bool) []*Utxo {
 			utxos = append(utxos, &Utxo{
 				TxId:    tx.Txid,
 				TxIndex: uint32(i),
+				Coin:    out.Coin,
+				CoinId:  out.CoinId,
 				Amount:  out.Amount,
-				Address: addr,
+				Address: out.ScriptPubKey.Addresses[0],
+				Height:  tx.BlockHeight,
 			})
 		}
 	}

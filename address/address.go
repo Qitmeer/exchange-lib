@@ -40,8 +40,8 @@ func EcPublicToAddress(ecPublic string, network string) (string, error) {
 	if err := ver.Set(network); err != nil {
 		return "", err
 	}
-	address := base58.QitmeerCheckEncode(h, ver.Ver)
-	return address, nil
+	address, err := base58.QitmeerCheckEncode(h, ver.Ver)
+	return string(address), err
 }
 
 func NewHdPrivate(network string) (string, error) {
@@ -70,7 +70,7 @@ func HdPrivateToPublic(private string, network string) (string, error) {
 	if err := ver.Set(network); err != nil {
 		return "", err
 	}
-	data := base58.Decode(private)
+	data := base58.Decode([]byte(private))
 	masterKey, err := bip32.Deserialize2(data, ver.Version)
 	if err != nil {
 		return "", err
@@ -83,7 +83,7 @@ func HdPrivateToPublic(private string, network string) (string, error) {
 }
 
 func NewHdDerive(hdPrivateOrPublic string, index uint32, network string) (string, error) {
-	data := base58.Decode(hdPrivateOrPublic)
+	data := base58.Decode([]byte(hdPrivateOrPublic))
 	if len(data) != bip32_ByteSize {
 		return "", fmt.Errorf("invalid bip32 key size (%d), the size hould be %d", len(data), bip32_ByteSize)
 	}
@@ -108,7 +108,7 @@ func HdToEc(hdPrivateOrPublic string, network string) (string, error) {
 	if err := ver.Set(network); err != nil {
 		return "", err
 	}
-	data := base58.Decode(hdPrivateOrPublic)
+	data := base58.Decode([]byte(hdPrivateOrPublic))
 	key, err := bip32.Deserialize2(data, ver.Version)
 	if err != nil {
 		return "", err
