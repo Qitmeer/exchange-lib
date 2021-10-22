@@ -1,5 +1,5 @@
 # exchange-lib
-The Qitmeer API/SDK for PMEER exchanges 
+The Qitmeer API/SDK for MEER exchanges 
 
 #### How to use
 
