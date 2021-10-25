@@ -1,6 +1,8 @@
 package uxto
 
-import "github.com/Qitmeer/exchange-lib/rpc"
+import (
+	"github.com/Qitmeer/exchange-lib/rpc"
+)
 
 type Utxo struct {
 	Coin    string
@@ -23,6 +25,7 @@ func GetUxtos(tx *rpc.Transaction) []*Utxo {
 
 		switch out.ScriptPubKey.Type {
 		case "pubkeyhash":
+			fallthrough
 		case "cltvpubkeyhash":
 			utxos = append(utxos, &Utxo{
 				TxId:    tx.Txid,
