@@ -2,8 +2,8 @@
 listen="0.0.0.0:11360"
 
 [rpc]
-host="127.0.0.1"
-tls=false
+host="127.0.0.1:8131"
+tls=true
 admin="test"
 password="test"
 
