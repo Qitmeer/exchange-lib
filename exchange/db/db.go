@@ -414,6 +414,7 @@ type UTXO struct {
 	Height     uint64 `json:"height"`
 	Lock       uint64 `json:"lock"`
 	IsCoinBase bool   `json:"iscoinbase"`
+	PkHex      string `json:"pkhex"`
 }
 
 type SpentUTXO struct {

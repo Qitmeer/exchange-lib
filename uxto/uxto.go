@@ -12,6 +12,7 @@ type Utxo struct {
 	Amount  uint64
 	Address string
 	Height  uint64
+	PkHex   string
 }
 
 type Spent struct {
@@ -35,6 +36,7 @@ func GetUxtos(tx *rpc.Transaction) []*Utxo {
 				Amount:  out.Amount,
 				Address: out.ScriptPubKey.Addresses[0],
 				Height:  tx.BlockHeight,
+				PkHex: 	 out.ScriptPubKey.Hex,
 			})
 		}
 

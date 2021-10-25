@@ -123,21 +123,24 @@ The Qitmeer API/SDK for MEER exchanges
                 "vout": 1,
                 "address": "Tmax8njWbgrz4oagPBtQTzRMmDkUUPcVV3e",
                 "amount": 299995000000000,
-                "spent": ""
+                "spent": "",
+                "pkhex": "76a9142a1dfad6bb26da7c0138b85440aa44a76cffade388ac"
             },
             {
                 "txid": "93517537cfcb9b53b56ddefae24f109f49943cc85e38d9b9bc196aad94013baf",
                 "vout": 1,
                 "address": "Tmax8njWbgrz4oagPBtQTzRMmDkUUPcVV3e",
                 "amount": 299995000000000,
-                "spent": ""
+                "spent": "",
+                "pkhex": "76a9142a1dfad6bb26da7c0138b85440aa44a76cffade388ac"
             },
             {
                 "txid": "9c89feabd1a85b497681cd4e6cea83abd758ff28427c5ec853a5a97e96c5f236",
                 "vout": 0,
                 "address": "Tmax8njWbgrz4oagPBtQTzRMmDkUUPcVV3e",
                 "amount": 299995000000000,
-                "spent": ""
+                "spent": "",
+                "pkhex": "76a9142a1dfad6bb26da7c0138b85440aa44a76cffade388ac"
             }
         ]
       }
@@ -167,16 +170,19 @@ The Qitmeer API/SDK for MEER exchanges
 #### 2. Sign transaction
 
 ```
+
         inputs := make(map[string]uint32, 0)
 	outputs := make(map[string]uint64, 0)
 	inputs["fa069bd82eda6b98e9ea40a575de1dc4c053d94a9901a956e13d30f6ab81413e"] = 0
+	pkHexList := []string{"76a9142a1dfad6bb26da7c0138b85440aa44a76cffade388ac"}
 	outputs["TmUQjNKPA3dLBB6ZfcKd4YSDThQ9Cqzmk5S"] = 100000000
 	outputs["TmWRM7fk8SzBWvuUQv2cJ4T7nWPnNmzrbxi"] = 200000000
-	txCode, err := sign.TxEncode(1, 0, nil, inputs, outputs)
+	txCode, err := sign.TxEncode(1, 0, nil, inputs, outputs， "MEER")
 	if err != nil {
 		fmt.Println(err)
 	} else {
-		rawTx, ok := sign.TxSign(txCode, "b0985973cb08f7e0f013301a9686fe978cf1d887a8290184d39176c1a5157424", "testnet")
+	    key := "1234567812345678123456781234567812345678123456781234567812345678"
+		rawTx, ok := sign.TxSign(txCode, []string{key}, "b0985973cb08f7e0f013301a9686fe978cf1d887a8290184d39176c1a5157424", "testnet", pkHexList)
 		if ok {
 			client := rpc.NewClient(&rpc.RpcConfig{
 				User:    "admin",
