@@ -18,17 +18,23 @@ type Spent struct {
 }
 
 func GetUxtos(tx *rpc.Transaction) []*Utxo {
-	utxos := make([]*Utxo, len(tx.Vout))
+	utxos := make([]*Utxo, 0)
 	for i, out := range tx.Vout {
-		utxos[i] = &Utxo{
-			TxId:    tx.Txid,
-			TxIndex: uint32(i),
-			Coin:    out.Coin,
-			CoinId:  out.CoinId,
-			Amount:  out.Amount,
-			Address: out.ScriptPubKey.Addresses[0],
-			Height:  tx.BlockHeight,
+
+		switch out.ScriptPubKey.Type {
+		case "pubkeyhash":
+		case "cltvpubkeyhash":
+			utxos = append(utxos, &Utxo{
+				TxId:    tx.Txid,
+				TxIndex: uint32(i),
+				Coin:    out.Coin,
+				CoinId:  out.CoinId,
+				Amount:  out.Amount,
+				Address: out.ScriptPubKey.Addresses[0],
+				Height:  tx.BlockHeight,
+			})
 		}
+
 	}
 	return utxos
 }
