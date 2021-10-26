@@ -120,6 +120,7 @@ func startSync(storage *db.UTXODB, synchronizer *sync.Synchronizer, wg *sync2.Wa
 								Coin:       u.Coin,
 								Height:     u.Height,
 								IsCoinBase: tx.IsCoinBase,
+								PkHex: 		u.PkHex,
 							}
 							storage.UpdateAddressUTXO(u.Address, dbUtxo)
 							storage.SaveUTXO(dbUtxo)
